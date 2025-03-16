@@ -1,7 +1,7 @@
 # Copperx Payout Telegram Bot
 
 ## Overview
-The Copperx Payout Telegram Bot allows users to manage USDC transactions directly through Telegram without visiting the Copperx web app. The bot integrates with the Copperx Payout API to facilitate deposits, withdrawals, and transfers.
+The Copperx Payout Telegram Bot (Copperx_payout) allows users to manage USDC transactions directly through Telegram without visiting the Copperx web app. The bot integrates with the Copperx Payout API to facilitate deposits, withdrawals, and transfers.
 
 ## Features
 - **Authentication & Account Management**: Secure login with Copperx credentials and KYC status checks.
