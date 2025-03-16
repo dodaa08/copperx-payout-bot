@@ -72,11 +72,11 @@ bot.onText(/\/verify (.+)/, async (msg, match) => {
 
   try {
     const response = await axios.post(
-      'https://income-api.copperx.io/api/auth/email-otp/verify',
-      { otp : otp.toString(), sid: session.sid.toString() , email : session.email.toString()},
+      'https://income-api.copperx.io/api/auth/email-otp/authenticate',
+      { email: session.email, otp: otp, sid: session.sid },
       { headers: { 'Content-Type': 'application/json' } }
     );
-
+    
     if (response.status === 200 && response.data.accessToken) {
       bot.sendMessage(msg.chat.id, '✅ OTP verified successfully!');
       delete userSessions[msg.chat.id]; // Clear session after successful verification
