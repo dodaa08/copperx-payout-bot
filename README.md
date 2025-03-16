@@ -38,17 +38,13 @@ backend/
 git clone https://github.com/your-repo/copperx-payout-bot.git
 ```
 
-2. Navigate to the project directory:
-```bash
-cd copperx-payout-bot
-```
 
-3. Install dependencies:
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-4. Create a `.env` file in the root folder and add your environment variables:
+3. Create a `.env` file in the root folder and add your environment variables:
 ```plaintext
 COPPERX_API_KEY=your_api_key
 PUSHER_KEY=your_pusher_key
@@ -56,7 +52,7 @@ PUSHER_CLUSTER=ap1
 TELEGRAM_BOT_TOKEN=your_telegram_token
 ```
 
-5. Run the bot in development mode:
+4. Run the bot in development mode:
 ```bash
 npm run dev
 ```
@@ -87,8 +83,7 @@ npm run dev
 - Proper error handling and user feedback
 - Session management and token refresh mechanism
 
-## Deployment
-Deploy the bot for free on [Render](https://render.com/):
+
 ```bash
 git push render master
 ```
@@ -113,5 +108,5 @@ git push origin feature-name
 MIT License
 
 ## Contact
-- Join the Copperx Community: [Telegram Group](https://t.me/copperxcommunity/2991)
+- kartikdoda86@gmail.com
 
