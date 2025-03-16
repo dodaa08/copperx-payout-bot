@@ -7,6 +7,9 @@ node_modules/
 # Compiled output
 dist/
 
-
-#packages
+# Lock file
 package-lock.json
+
+# Git and version control
+.git/
+.gitignore
