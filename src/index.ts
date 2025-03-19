@@ -128,6 +128,10 @@ bot.onText(/\/me/, async (msg) => {
 
 
 
+
+
+// wallets
+
 bot.onText(/\/wallets/, async (msg) => {
   const session = userSessions[msg.chat.id];
 
@@ -159,6 +163,55 @@ bot.onText(/\/wallets/, async (msg) => {
     bot.sendMessage(msg.chat.id, '❌ Error fetching wallets. Please try again.');
   }
 });
+
+bot.onText(/\/balances/, async (msg) => {
+  const session = userSessions[msg.chat.id];
+
+  if (!session || !session.accessToken) {
+    return bot.sendMessage(msg.chat.id, '❌ No active session. Verify OTP first.');
+  }
+
+  try {
+    const response = await axios.get("https://income-api.copperx.io/api/wallets/balances", {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.accessToken}` // Include access token
+      }
+    });
+
+    const wallets = response.data; // API returns an array of wallets
+    if (!wallets.length) {
+      return bot.sendMessage(msg.chat.id, '❌ No wallets found.');
+    }
+
+    let WalletBalance = "✅ Your Wallet Balances:\n\n";
+
+    wallets.forEach((wallet: any) => {
+      WalletBalance += `💼 Wallet Network: ${wallet.network}\n`;
+
+      if (!wallet.balances.length) {
+        WalletBalance += `  - No balances found.\n`;
+      } else {
+        wallet.balances.forEach((x: any) => {
+          WalletBalance += `  - ${x.symbol}: ${x.balance} (${x.decimals} decimals)\n`;
+        });
+      }
+
+      WalletBalance += "--------------------\n";
+    });
+
+    bot.sendMessage(msg.chat.id, WalletBalance);
+  } catch (error: any) {
+    console.error('Error fetching balances:', error.response?.data || error.message);
+    bot.sendMessage(msg.chat.id, '❌ Error fetching balances. Please try again.');
+  }
+});
+
+
+
+
+
+
 
 bot.onText(/\/generate_wallet (\d+)/, async (msg, match) => {
   const session = userSessions[msg.chat.id];
@@ -195,6 +248,34 @@ bot.onText(/\/generate_wallet (\d+)/, async (msg, match) => {
     bot.sendMessage(msg.chat.id, '❌ Error generating wallet. Please try again.');
   }
 });
+
+
+
+bot.onText(/\/default/, async(msg, walletId)=>{
+  const session = userSessions[msg.chat.id];
+  
+  if (!session || !session.accessToken) {
+    return bot.sendMessage(msg.chat.id, '❌ No active session. Verify OTP first.');
+  }
+
+  try{
+    const response = await axios.post("", {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.accessToken}`,
+      },
+      walletId : walletId
+    });
+    console.log("Wallet Id set to default..");
+    bot.sendMessage(msg.chat.id, "Wallet id to default..",  response.data.walletAddress);
+  }
+  catch(error){
+    console.log(`Error : ${error}`);
+    bot.sendMessage(msg.chat.id, `Error setting up the wallet ${error}`);
+  }
+});
+
+
 
 
 
