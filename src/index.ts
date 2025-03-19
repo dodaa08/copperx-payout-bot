@@ -251,32 +251,67 @@ bot.onText(/\/generate_wallet (\d+)/, async (msg, match) => {
 
 
 
-bot.onText(/\/default/, async(msg, walletId)=>{
+bot.onText(/\/default (.+)/, async (msg, match) => {
   const session = userSessions[msg.chat.id];
-  
+
   if (!session || !session.accessToken) {
     return bot.sendMessage(msg.chat.id, '❌ No active session. Verify OTP first.');
   }
 
-  try{
-    const response = await axios.post("", {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-      walletId : walletId
-    });
-    console.log("Wallet Id set to default..");
-    bot.sendMessage(msg.chat.id, "Wallet id to default..",  response.data.walletAddress);
+  if (!match || !match[1]) {
+    return bot.sendMessage(msg.chat.id, '⚠️ Please provide a wallet ID. Example: /default wallet_123');
   }
-  catch(error){
-    console.log(`Error : ${error}`);
-    bot.sendMessage(msg.chat.id, `Error setting up the wallet ${error}`);
+
+  const walletId = match[1].trim(); // Extract and clean the wallet ID
+  if (!/^wallet_[a-zA-Z0-9]+$/.test(walletId)) {
+    return bot.sendMessage(msg.chat.id, "⚠️ Invalid wallet ID format. Example: /default wallet_123");
+  }
+  try {
+    const response = await axios.post("https://income-api.copperx.io/api/wallets/default", 
+      { walletId }, 
+      { 
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessToken}`,
+        }
+      }
+    );
+
+    bot.sendMessage(msg.chat.id, `✅ Wallet ID set to default: ${walletId}\nWallet Address: ${response.data.walletAddress}`);
+  } catch (error : any) {
+    console.error(`Error: ${error.response?.data?.error || error.message}`);
+    bot.sendMessage(msg.chat.id, `❌ Error setting default wallet: ${error.response?.data?.error || error.message}`);
   }
 });
 
 
 
+
+
+bot.onText(/\/default/, async (msg)=>{
+  const session = userSessions[msg.chat.id];
+  if(!session || !session.accessToken){
+    return bot.sendMessage(msg.chat.id, '❌ No active session. Verify OTP first.');
+  }
+  
+  try{
+    const response = await axios.get("https://income-api.copperx.io/api/wallets/default", 
+      { 
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessToken}`,
+        }
+      }
+    );
+
+    const wallet = response.data;
+    bot.sendMessage(msg.chat.id, `Default Wallet ${wallet.id}, Address : ${wallet.Address}`);
+  }
+  catch(error){
+
+    bot.sendMessage(msg.chat.id, `Error : ${error}`);
+  }
+});
 
 
 
