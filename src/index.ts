@@ -708,43 +708,97 @@ bot.onText(/\/sendbatch (.+)/, async (msg, match : any) => {
 // ============================================================================
 //  Notification API's
 // ============================================================================
+import Pusher from "pusher-js";
 
 
-bot.onText(/\/auth_noti/,async (msg, match : any)=>{
-  const session = userSessions[msg.chat.id];
-  
-  if(!session || !session.accessToken){
-    return bot.sendMessage(msg.chat.id, "No session found!!");
+const pusherClient = new Pusher(process.env.VITE_PUSHER_KEY as string, {
+  cluster: process.env.VITE_PUSHER_CLUSTER as string,
+  authorizer: (channel) => ({
+    authorize: async (socketId: string, callback: (error: any, authData?: any) => void) => {
+      try {
+        const response = await axios.post(
+          "https://income-api.copperx.io/api/notifications/auth",
+          {
+            socket_id: socketId,
+            channel_name: channel.name,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.GLOBAL_ACCESS_TOKEN}`,
+            },
+          }
+        );
+
+        if (response.data) {
+          callback(null, response.data);
+        } else {
+          callback(new Error("Pusher authentication failed"), null);
+        }
+      } catch (error: any) {
+        console.error("Pusher authorization error:", error);
+        callback(error, null);
+      }
+    },
+  }),
+});
+
+
+
+bot.onText(/\/auth_noti (.+)/, async (msg, match) => {
+  if (!match || !match[1]) {
+    return bot.sendMessage(msg.chat.id, "❌ Invalid command format. Use: `/auth_noti <socket_id> <channel_name>`");
   }
 
-  try{
-    const data = match[1].split(" ");
-    const [socket_id, channel_name] = data;
+  const chatId = msg.chat.id;
+  const session = userSessions[chatId];
 
-    const response = await axios.post("https://income-api.copperx.io/api/notification/auth", 
+  if (!session || !session.accessToken) {
+    return bot.sendMessage(chatId, "❌ No session found. Please verify OTP.");
+  }
+
+  const params = match[1].split(" ");
+  if (params.length < 2) {
+    return bot.sendMessage(chatId, "❌ Missing parameters. Use: `/auth_noti <socket_id> <channel_name>`");
+  }
+
+  const [socketId, channelName] = params;
+
+  try {
+    const response = await axios.post(
+      "https://income-api.copperx.io/api/notifications/auth",
+      { socket_id: socketId, channel_name: channelName },
       {
-        socket_id : socket_id,
-        channel_name : channel_name
-      },
-      {
-      
-        headers : {
+        headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
-        }
-      
+          Authorization: `Bearer ${process.env.GLOBAL_ACCESS_TOKEN}`,
+        },
+      }
+    );
+
+    bot.sendMessage(
+      chatId,
+      `✅ Auth Successful\n🔑 Auth: ${response.data.auth}\n👤 User Data: ${JSON.stringify(response.data.user_data)}`
+    );
+
+    const channel = pusherClient.subscribe(`private-org-${channelName}`);
+
+    channel.bind("pusher:subscription_succeeded", () => {
+      bot.sendMessage(chatId, "🎉 Successfully subscribed to notifications!");
     });
 
-    
-    const message = response.data;
-    bot.sendMessage(msg.chat.id, `Auth : ${message.auth}, \n  user_data ${message.user_data}`);
-  }
-  catch(error){
-    console.log(`Error : ${error}`);
-    bot.sendMessage(msg.chat.id, `Error : ${error}`);
-  }
+    channel.bind("pusher:subscription_error", (error: any) => {
+      bot.sendMessage(chatId, `⚠️ Subscription Error: ${error.message}`);
+    });
 
+    channel.bind("deposit", (data: { amount: string }) => {
+      bot.sendMessage(chatId, `💰 *New Deposit Received*\n\nAmount: ${data.amount} USDC on Solana`);
+    });
+  } catch (error: any) {
+    console.error("Error:", error.response ? error.response.data : error.message);
+    bot.sendMessage(chatId, `❌ Error: ${error.message}`);
+  }
 });
+
 
 
 
