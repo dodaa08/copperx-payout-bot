@@ -12,15 +12,28 @@ if (!token) {
 console.log(`Token: ${token}`);
 console.log('Starting the bot...');
 
-const bot = new TelegramBot(token, { polling: {interval : 3000} });
+const bot = new TelegramBot(token, {
+  polling: {
+    interval: 5000, // Increase to reduce API spam
+    autoStart: false, 
+    params: {
+      timeout: 10, // Keep connection open for longer
+    },
+  },
+});
 
 interface UserSession {
   sid: string;
   email: string;
   accessToken?: string;
+  isSubscribed?: boolean;
 }
 
 const userSessions: Record<number, UserSession> = {};
+
+bot.startPolling()
+  .then(() => console.log("✅ Bot is running..."))
+  .catch((error) => console.error("❌ Polling failed:", error));
 
 bot.on('polling_error', (error) => {
   console.error('Polling error:', error);
@@ -889,38 +902,44 @@ const initPusherClient = (session: any) => {
   return pusherClient;
 };
 
-// Command to start listening for notifications
+
+
 bot.onText(/\/notification/, async (msg) => {
   const chatId = msg.chat.id;
-  const session = userSessions[chatId];
+  let session = userSessions[chatId];
 
-  if (!session || !session.accessToken) {
-    return bot.sendMessage(chatId, `⚠️ No active session found.`);
+  if (!session) {
+    bot.sendMessage(chatId, `⚠️ No active session found.`);
+    return;
   }
 
-  const pusherClient = initPusherClient(session);
+  // ✅ Prevent duplicate subscriptions
+  if (session.isSubscribed) {
+    bot.sendMessage(chatId, '⚠️ You are already subscribed to deposit notifications.');
+    return;
+  }
 
-  // Subscribe to private organization channel
+  session.isSubscribed = true; // ✅ Mark user as subscribed
+
+  const pusherClient = initPusherClient(session);
   const channel = pusherClient.subscribe(`private-org-${ORGANIZATION_ID}`);
 
   channel.bind('pusher:subscription_succeeded', () => {
     bot.sendMessage(chatId, '✅ Subscribed to deposit notifications.');
   });
 
-  channel.bind('pusher:subscription_error', (error : any) => {
+  channel.bind('pusher:subscription_error', (error: any) => {
     console.error('Subscription error:', error);
-    bot.sendMessage(chatId, `❌ Subscription error: ${error}`);
+    bot.sendMessage(chatId, `❌ Subscription error: ${error.message}`);
   });
 
-  // Listen for deposit notifications
-  channel.bind('deposit', (data : any) => {
+  channel.bind('deposit', (data: any) => {
     bot.sendMessage(
       chatId,
       `💰 *New Deposit Received*\n\n${data.amount} USDC deposited on Solana.`
     );
   });
 });
-
 
 
 
