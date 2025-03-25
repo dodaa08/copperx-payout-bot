@@ -1,13 +1,13 @@
 # Node.js dependencies
 node_modules/
 
-# Environment variables
-.env
-
 # Compiled output
 dist/
 
-# Lock file
+# Environment variables
+.env
+
+# Lock files
 package-lock.json
 
 # Git and version control
