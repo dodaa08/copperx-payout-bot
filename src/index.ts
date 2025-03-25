@@ -5,6 +5,7 @@ import PayeeModel  from "./DB";
 import mongoose from 'mongoose';
 import crypto from "crypto";
 import QRCode from "qrcode";
+
 dotenv.config();
 
 const token = process.env.Tbot_token;
@@ -151,24 +152,39 @@ bot.on('polling_error', (error) => {
   console.error('Polling error:', error);
 });
 
+function isValidMessage(text: string): boolean {
+  // Example: Check if the message contains meaningful words
+  const meaningfulWords = text.split(/\s+/).filter(word => word.length > 2); // Words longer than 2 letters
+  return meaningfulWords.length > 0; // At least one valid word
+}
+
+
 bot.on("message", (msg) => {
   const chatId = msg.chat.id;
-  const text : any = msg.text?.trim();
+  const text: any = msg.text?.trim();
 
   if (!text) return;
 
+  // If the message starts with "/" but isn't a valid command
   if (text.startsWith("/")) {
-      if (!commands.includes(text)) {
-          bot.sendMessage(chatId, "I'm not sure what you're trying to do. Use /help to see available commands or try 'send 5 USDC to user@example.com'.");
-      }
+    if (!commands.includes(text)) {
+      bot.sendMessage(chatId, "I'm not sure what you're trying to do. Use /help to see available commands or try 'send 5 USDC to user@example.com'.");
+    }
   }
+  // Allow valid numeric inputs (e.g., amounts entered during transactions)
+  else if (!isNaN(parseFloat(text))) {
+    // If a transaction is in progress, allow numbers as valid input
+    return;
+  }
+  
 });
+
+
+
 
 bot.onText(/\/start/, (msg) => {
   bot.sendMessage(msg.chat.id, 'Welcome to the copperx-pay-out bot.. user /help to explore all options..');
 });
-
-
 
 
 
@@ -263,6 +279,7 @@ bot.on("callback_query", async (query) => {
   // ============================================================================
   else if (action === "kyc_status") {
     // ✅ Directly call the /me command logic
+
     bot.processUpdate({
       update_id: Date.now(),
       message: {
@@ -272,7 +289,7 @@ bot.on("callback_query", async (query) => {
         date: Math.floor(Date.now() / 1000),
       },
     });
-  }
+    }
 
   // ============================================================================
 
@@ -315,8 +332,6 @@ bot.on("callback_query", async (query) => {
         ],
       },
     };
-
-    
 
     bot.sendMessage(chatId, "Choose a token to send:", options);
   }
@@ -481,7 +496,8 @@ bot.on("callback_query", async (query) => {
         date: Math.floor(Date.now() / 1000),
       },
     });
-  }
+
+    }
   // ============================================================================
   else if (action === "withdraw") {
     // ✅ Simulate user sending "/withdraw" command
@@ -498,6 +514,7 @@ bot.on("callback_query", async (query) => {
   // ============================================================================
   else if (action === "deposit") {
     const session = userSessions[chatId];
+    
     if (!session || !session.accessToken) {
       return bot.sendMessage(chatId, "❌ No active session. Verify OTP first.");
     }
@@ -2411,16 +2428,152 @@ bot.onText(/\/notification/, async (msg) => {
 });
 
 
+// interface responseT{
+//   email : string,
+//   nickName : string,
+//   payeeId : string
+// }
+
+
+
+// bot.onText(/\/addpayee (.+)/, async (msg, match) => {
+
+
+  
+
+
+
+//   const session = userSessions[msg.chat.id];
+//   if (!session || !session.accessToken) {
+//     bot.sendMessage(msg.chat.id, "❌ You are not authenticated. Please log in.");
+//     return;
+//   }
+
+//   if (!match || !match[1]) {
+//     bot.sendMessage(msg.chat.id, "⚠️ Please provide payee details in the format: `/addpayee email nickname`");
+//     return;
+//   }
+
+//   const data = match[1].split(" ");
+//   const [email, nickName] = data;
+
+//   if (!email || !nickName) {
+//     bot.sendMessage(msg.chat.id, "⚠️ Missing required fields! Use: `/addpayee email nickname`");
+//     return;
+//   }
+//   const cryptoRandomString = await import("crypto-random-string").then((mod) => mod.default);
+//   // Generate a unique ID
+//   const payeeId = cryptoRandomString({ length: 12, type: "alphanumeric" });
+
+//   try {
+//     const response : responseT = await axios.post(
+//       `https://income-api.copperx.io/api/payees`,
+//       {
+//         payeeId: payeeId, // Assign the generated ID
+//         nickName: nickName,
+//         firstName: "John",  
+//         lastName: "Doe",
+//         email: email,
+//         phoneNumber: "1234567890",
+//         bankAccount: {
+//           country: "USA",
+//           bankName: "Bank of America",
+//           bankAddress: "123 Wall Street",
+//           type: "web3_wallet",
+//           bankAccountType: "savings",
+//           bankRoutingNumber: "000000000",
+//           bankAccountNumber: "000000000000",
+//           bankBeneficiaryName: "John Doe",
+//           bankBeneficiaryAddress: "123 Wall Street",
+//           swiftCode: "BOFAUS3N",
+//         },
+//       },
+//       {
+//         headers: {
+//           "Content-Type": "application/json",
+//           Authorization: `Bearer ${session.accessToken}`,
+//         },
+//       }
+//     );
+
+//     bot.sendMessage(msg.chat.id, `✅ Payee ${response.nickName} added successfully with ID: ${response.payeeId}`);
+//   } catch (error: any) {
+//     console.error("Error:", error.response?.data || error.message);
+//     bot.sendMessage(
+//       msg.chat.id,
+//       `❌ Error adding payee: ${error.response?.data?.message || error.message}`
+//     );
+//   }
+// });
+
+
+
+// bot.onText(/\/getPayee/, async (msg) => {
+
+//   const session = userSessions[msg.chat.id];
+
+//   if (!session || !session.accessToken) {
+//     bot.sendMessage(msg.chat.id, "❌ You are not authenticated. Please log in.");
+//     return;
+//   }
+
+//   try {
+//     const response = await axios.get("https://income-api.copperx.io/api/payees", {
+//       headers: {
+//         "Content-Type": "application/json",
+//         Authorization: `Bearer ${session.accessToken}`,
+//       },
+//     });
+
+//     // Extract the payees from the response
+//     const payees = response.data;
+
+//     if (!payees || payees.length === 0) {
+//       bot.sendMessage(msg.chat.id, "⚠️ No payees found.");
+//       return;
+//     }
+
+//     // Format the list of payees
+//     let message = "📜 *Payee List:*\n";
+//     payees.forEach((payee : any, index : number) => {
+//       message += `\n*${index + 1}.* 🆔 *ID:* ${payee.payeeId}\n👤 *Nickname:* ${payee.nickName}\n📧 *Email:* ${payee.email}\n🏦 *Bank:* ${payee.bankAccount.bankName}\n`;
+//     });
+
+//     bot.sendMessage(msg.chat.id, message, { parse_mode: "Markdown" });
+//   } catch (error: any) {
+//     console.error("Error:", error.response?.data || error.message);
+//     bot.sendMessage(
+//       msg.chat.id,
+//       `❌ Error fetching payees: ${error.response?.data?.message || error.message}`
+//     );
+//   }
+// });
 
 
 
 
+// bot.onText(/\/removePayee/, async (msg, match : any)=>{
+//   const session = userSessions[msg.chat.id];
+//   if(!session || !session.accessToken) return;
+
+//   const data = match[1].split(" ");
+//   const [id] = data;
+
+//   try{
+//     const response = await axios.delete(`https://income-api.copperx.io/api/payees/${id}`);
+
+//     bot.sendMessage(msg.chat.id, `Payee deleted...`);
+    
+//   }
+//   catch(error : any){
+//     console.error("Error:", error.response?.data || error.message);
+//     bot.sendMessage(
+//       msg.chat.id,
+//       `❌ Error fetching payees: ${error.response?.data?.message || error.message}`
+//     );
+//   }
 
 
-
-
-
-
-
+// });
 
 
