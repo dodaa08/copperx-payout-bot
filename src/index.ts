@@ -103,7 +103,7 @@ const initPusherClient = (session: any) => {
 
 const bot = new TelegramBot(token, {
   polling: {
-    interval: 3000, // Increase to reduce API spam
+    interval: 5000, // Increase to reduce API spam
     autoStart: false, 
     params: {
       timeout: 10, // Keep connection open for longer
